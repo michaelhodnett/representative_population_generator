@@ -1,0 +1,29 @@
+version: "2"
+services:
+    backend:
+        image: $BACKEND_IMAGE:$TAG
+        ports:
+            - 8080:8080
+        links:
+            - mongo
+        mem_limit: 2100000000
+
+    frontend:
+        image: $FRONTEND_IMAGE:$TAG
+        links:
+          - backend
+        ports:
+          - 80:3000
+        depends_on:
+            - mongo
+            - backend
+        environment:
+            - REACT_APP_API_HOSTNAME=$WEBSITE_URL
+            - REACT_APP_VERSION=$TAG
+            - REACT_APP_MAPBOX_TOKEN=$MAPBOX_TOKEN
+
+    mongo:
+        image: $DATABASE_IMAGE:$TAG
+        ports:
+          - 27017:27017
+        mem_limit: 2100000000
