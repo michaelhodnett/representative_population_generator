@@ -1,0 +1,61 @@
+version: "2"
+services:
+    explorer:
+        build: ./models
+        volumes:
+          - ./models:/home/jovyan/work/models:ro
+          - ./data:/home/jovyan/work/data:rw
+          - ./data_analysis:/home/jovyan/work/data_analysis:rw
+          - ./Makefile:/home/jovyan/work/Makefile:ro
+          - ./.coveragerc:/home/jovyan/work/.coveragerc:ro
+          - ./.flake8:/home/jovyan/work/.flake8:ro
+          - ./circle.yml:/home/jovyan/work/circle.yml:ro
+          - ./models/:/usr/local/lib/python3.6/site-packages/network-adequacy:ro
+        command: bash -c "start-notebook.sh --NotebookApp.token=''"
+        ports:
+          - 8888:8888
+        environment:
+          - PYTHONPATH=/home/jovyan/work
+
+    backend:
+        build:
+          context: ./web-app/backend
+          dockerfile: Dockerfile
+        volumes:
+          - ./web-app/backend/app/main.py:/app/main.py:ro
+          - ./web-app/backend/config/uwsgi.ini:/app/uwsgi.ini:ro
+          - ./web-app/backend/config/nginx.conf:/etc/nginx/conf.d/nginx.conf:ro
+          - ./web-app/backend/app/:/var/local/app/:ro
+          - ./web-app/backend/tests:/app/tests:ro
+          - .flake8:/app/.flake8:ro
+          - ./web-app/backend:/usr/local/lib/python3.6/site-packages/backend
+        build: ./web-app/backend
+        links:
+          - mongo
+        ports:
+          - 8080:8080
+
+    mongo:
+        build:
+          context: ./web-app/database
+          dockerfile: Dockerfile
+        ports:
+          - 27017:27017
+
+    frontend:
+        volumes:
+          - ./web-app/frontend/src:/usr/src/app/src
+          - ./web-app/frontend/public:/usr/src/app/public
+        command: npm run start
+        build: ./web-app/frontend
+        links:
+          - backend
+        ports:
+          - 80:3000
+        depends_on:
+          - mongo
+          - backend
+        environment:
+          - REACT_APP_MAPBOX_TOKEN=$MAPBOX_TOKEN
+          - REACT_APP_API_HOSTNAME=http://localhost:8080
+          - REACT_APP_VERSION=DEV
